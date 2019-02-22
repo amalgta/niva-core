@@ -11,7 +11,6 @@ const axios = require("axios");
 admin.initializeApp();
 
 exports.users = require("./users");
-exports.manager = require("./manager");
 
 // Take the text parameter passed to this HTTP endpoint and insert it into the
 // Realtime Database under the path /messages/:pushId/original

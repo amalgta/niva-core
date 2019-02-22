@@ -3,7 +3,7 @@ const functions = require("firebase-functions");
 // The Firebase Admin SDK to access the Firebase Realtime Database.
 const admin = require("firebase-admin");
 
-exports.users = functions.https.onRequest((req, res) => {
+exports.allUsers = functions.https.onRequest((req, res) => {
   const documentName = "users";
   const reqMethod = req.method;
   switch (reqMethod) {
@@ -16,6 +16,30 @@ exports.users = functions.https.onRequest((req, res) => {
           let arrayR = snapshot.docs.map(doc => {
             var json = doc.data();
             json.manager = json.manager._path.segments[1];
+            return json;
+          });
+          return res.status(200).json(arrayR).send;
+        });
+    default:
+      return res.status(200).send("NOT GET");
+  }
+});
+
+exports.onlyName = functions.https.onRequest((req, res) => {
+  const documentName = "users";
+  const reqMethod = req.method;
+  switch (reqMethod) {
+    case "GET":
+      return admin
+        .firestore()
+        .collection(documentName)
+        .get()
+        .then(snapshot => {
+          let arrayR = snapshot.docs.map(doc => {
+            console.log("doc", doc);
+            var json = {
+              name: doc.data().firstName + " " + doc.data().lastName
+            };
             return json;
           });
           return res.status(200).json(arrayR).send;
