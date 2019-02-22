@@ -1,7 +1,45 @@
-// The Cloud Functions for Firebase SDK to create Cloud Functions and setup triggers.
+``; // The Cloud Functions for Firebase SDK to create Cloud Functions and setup triggers.
 const functions = require("firebase-functions");
 // The Firebase Admin SDK to access the Firebase Realtime Database.
 const admin = require("firebase-admin");
+
+exports.gta = functions.https.onRequest((req, res) => {
+  const documentName = "users";
+  const reqMethod = req.method;
+  const isNameOnly = req.query.isNameOnly;
+
+  // query firestore based on user
+  var transactions = admin.firestore().collection(documentName);
+  transactions
+    .get()
+    .then(userSnapshot => {
+      var employees = new Array();
+      userSnapshot.forEach(doc => {
+        doc
+          .data()
+          .manager.get()
+          .then(app => {
+            jsonObject = doc.data();
+            jsonObject.manager = app.data();
+            employees.push(jsonObject);
+          });
+      });
+      console.log("Employee  ", employees);
+      return employees;
+    })
+    .catch(err => {
+      console.log("Error getting transactions", err);
+    })
+    .then(accountbalance => {
+      res
+        .status(200)
+        .json(accountbalance)
+        .send();
+    })
+    .catch(err => {
+      console.log("Error sending response", err);
+    });
+});
 
 exports.all = functions.https.onRequest((req, res) => {
   const documentName = "users";
@@ -126,3 +164,4 @@ exports.manager = functions.https.onRequest((req, res) => {
     )
     .catch(error => res.status(500).send(error));
 });
+``;
