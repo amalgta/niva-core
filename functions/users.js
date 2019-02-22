@@ -3,29 +3,43 @@ const functions = require("firebase-functions");
 // The Firebase Admin SDK to access the Firebase Realtime Database.
 const admin = require("firebase-admin");
 
-exports.allUsers = functions.https.onRequest((req, res) => {
+exports.all = functions.https.onRequest((req, res) => {
   const documentName = "users";
   const reqMethod = req.method;
-  switch (reqMethod) {
-    case "GET":
-      return admin
-        .firestore()
-        .collection(documentName)
-        .get()
-        .then(snapshot => {
-          let arrayR = snapshot.docs.map(doc => {
-            var json = doc.data();
-            json.manager = json.manager._path.segments[1];
-            return json;
-          });
-          return res.status(200).json(arrayR).send;
-        });
-    default:
-      return res.status(200).send("NOT GET");
-  }
+  const isNameOnly = req.query.isNameOnly;
+  if (isNameOnly) console.log("isNameOnly", isNameOnly);
+  return admin
+    .firestore()
+    .collection(documentName)
+    .get()
+    .then(snapshot => {
+      let arrayR = snapshot.docs.map(doc => {
+        if (!isNameOnly) {
+          var json = doc.data();
+          json.ppp = json.manager
+            .get()
+            .then(snapshot => {
+              var thisManager =
+                snapshot.data().firstName + " " + snapshot.data().lastName;
+              console.log("GTA", thisManager);
+              return thisManager;
+            })
+            .catch(error => {
+              reject(error);
+            });
+          return json;
+        } else {
+          var json = {
+            name: doc.data().firstName + " " + doc.data().lastName
+          };
+          return json;
+        }
+      });
+      return res.status(200).json(arrayR).send;
+    });
 });
 
-exports.onlyName = functions.https.onRequest((req, res) => {
+exports.allOnlyName = functions.https.onRequest((req, res) => {
   const documentName = "users";
   const reqMethod = req.method;
   switch (reqMethod) {
@@ -37,10 +51,6 @@ exports.onlyName = functions.https.onRequest((req, res) => {
         .then(snapshot => {
           let arrayR = snapshot.docs.map(doc => {
             console.log("doc", doc);
-            var json = {
-              name: doc.data().firstName + " " + doc.data().lastName
-            };
-            return json;
           });
           return res.status(200).json(arrayR).send;
         });
@@ -49,28 +59,39 @@ exports.onlyName = functions.https.onRequest((req, res) => {
   }
 });
 
+exports.byName = functions.https.onRequest((req, res) => {
+  const documentName = "users";
+  const reqMethod = req.method;
+  const name = req.query.name;
+
+  return new Promise((resolve, reject) => {
+    var selectedUser = admin
+      .firestore()
+      .collection(documentName)
+      .get()
+      .then(snapshot => {
+        let array = snapshot.docs.map(doc => {
+          return doc.data();
+        });
+        return array;
+      })
+      .catch(error => {
+        reject(error);
+      });
+    resolve(selectedUser);
+  })
+    .then(json => res.status(200).json(json).send)
+    .catch(error => {
+      console.log("error", error);
+      res.status(500).send(error);
+    });
+});
+
 exports.manager = functions.https.onRequest((req, res) => {
   const documentName = "users";
   const reqMethod = req.method;
   const email = req.query.email;
 
-  return getManagerId(email)
-    .then(userDetails => {
-      return admin
-        .firestore()
-        .collection(documentName)
-        .doc(userDetails.manager)
-        .get();
-    })
-    .then(
-      doc =>
-        res.status(200).json(doc.data().firstName + " " + doc.data().lastName)
-          .send
-    )
-    .catch(error => res.status(500).send(error));
-});
-
-function getManagerId(email) {
   return new Promise((resolve, reject) => {
     const documentName = "users";
     var selectedUser = admin
@@ -90,5 +111,18 @@ function getManagerId(email) {
         reject(error);
       });
     resolve(selectedUser);
-  });
-}
+  })
+    .then(userDetails => {
+      return admin
+        .firestore()
+        .collection(documentName)
+        .doc(userDetails.manager)
+        .get();
+    })
+    .then(
+      doc =>
+        res.status(200).json(doc.data().firstName + " " + doc.data().lastName)
+          .send
+    )
+    .catch(error => res.status(500).send(error));
+});
